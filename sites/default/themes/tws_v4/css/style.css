@@ -1,0 +1,394 @@
+/* $Id: style.css,v 1.19 2006/12/27 13:17:15 drumm Exp $ */
+/*
+** HTML elements
+*/
+body {
+  margin: 0;
+  padding: 0;
+  color: #000;
+  background-color: #CCC;
+  font: 76% Verdana, Arial, Helvetica, sans-serif;
+}
+tr.odd td, tr.even td {
+  padding: 0.3em;
+}
+h1, h2, h3, h4, h5, h6 {
+  margin-bottom: 0.5em;
+	color: #454545;
+}
+h1 {
+  font-size: 1.3em;
+}
+h2 {
+  font-size: 1.2em;
+}
+h3, h4, h5, h6 {
+  font-size: 1.1em;
+}
+h1#page-title {
+	font-size: 28px;
+}
+.node h3 {
+	font-size: 18px;
+	margin-top: 1.4em;
+}
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.9em;
+}
+
+fieldset {
+  border: 1px solid #ccc;
+}
+pre {
+  background-color: #eee;
+  padding: 0.75em 1.5em;
+  font-size: 12px;
+  border: 1px solid #ddd;
+}
+table {
+  /* make <td> sizes relative to body size! */
+  font-size: 1em;
+}
+.form-item label {
+  font-size: 1em;
+  color: #222;
+}
+.item-list .title {
+  font-size: 1em;
+  color: #222;
+}
+.links {
+  margin-bottom: 0;
+}
+.comment .links {
+  margin-bottom: 0;
+}
+a {text-decoration: none; font-weight: bold;color: #ffcc00;}
+a:hover {text-decoration: underline;}
+.main_content a,
+.main_content a:visited {
+  color: #333333;
+}
+
+/*
+** Page layout blocks / IDs
+*/
+#page{width:100%;}
+.logo{float:left; padding: 0; margin: 0;}
+.logo a,
+.logo a:visited {
+  outline: none;
+  background: url(../images/logo.png) no-repeat left top;
+	display: block;
+	height: 110px;
+	width: 349px;
+	text-indent: -100000px;
+	overflow: hidden;
+}
+.top{padding-top: 2em; width:100%; background: #242424; border-bottom: 5px solid #c29e0f;}
+.top .inner_width {
+  width: 840px;
+}
+.top_right{float:right; color:#FFFFFF; margin-top: 50px;}
+.main_content{background: #FFFFFF url(../images/main_content_bg.jpg) repeat-x left top; padding:20px 0.3em 20px 0.3em;}
+.main{width:100%; float:left;}
+body.sidebars .main{width:56%;}
+body.sidebar-left .main, body.sidebar-right .main{width:78%;}
+.sidebar_right{width:20%; float:left;margin-left:2%;}
+.inner_width{width:820px; margin-left: auto; margin-right: auto;}
+#footer {
+  background: #CCCCCC url(../images/footer_bg.jpg) repeat-x left top;
+  font-size: 0.8em;
+  height:100px;
+  width:100%;
+  color:#666666;
+  /*position:absolute;
+  bottom:0;*/
+}
+#footer a {
+	color: #333;
+}
+#footer .inner_width{padding-top:20px; text-align:center;}
+
+#navlist {padding:0.6em 0 0.6em 0;}
+ul#navlist li{display:inline;}
+#navlist a {font-weight: bold;color: #fff; font-size: 1.3em;}
+#navlist a.active {
+	border-bottom: 2px solid #fff;
+}
+#subnavlist {padding: 0.5em 1.2em 0.4em 0;font-size: 0.8em;color: #9cf;}
+#subnavlist a {font-weight: bold;color: #9cf;}
+ul.links li {border-left: 1px solid #eee; padding-left:20px; padding-right:20px;}
+ul.links li.first {border: none;padding-left:0;}
+#search .form-text, #search .form-submit {
+  border: 1px solid #369;
+  font-size: 1.1em;
+  height: 1.5em;
+  vertical-align: middle;
+}
+#search .form-text {
+  width: 8em;
+  padding: 0 0.5em;
+}
+#mission {
+  background: #eeeeee;
+  padding: 0.5em;
+  margin-bottom: 2em;
+  color: #666666;
+}
+#mission a, #mission a:visited {
+  color: #666;
+  font-weight: bold;
+}
+#mission .highlight-text {
+  color: #454545;
+}
+.site-name {
+  margin: 0.6em 0 0 0;
+  padding: 0;
+  font-size: 2em;
+}
+.site-name a:link, .site-name a:visited {
+  color: #fff;
+}
+.site-name a:hover {
+  color: #369;
+  text-decoration: none;
+}
+.site-slogan {
+  font-size: 1em;
+  color: #eee;
+  display: block;
+  margin: 0;
+  font-style: italic;
+  font-weight: bold;
+}
+#mission, .node .content, .comment .content {
+  line-height: 1.4em;
+}
+#help {
+  font-size: 0.9em;
+  margin-bottom: 1em;
+}
+.breadcrumb {
+  margin-bottom: .5em;
+}
+.messages {
+  background-color: #eee;
+  border: 1px solid #ccc;
+  padding: 0.3em;
+  margin-bottom: 1em;
+}
+.error {
+  border-color: red;
+}
+
+
+/*
+** Common declarations for child classes of node, comment, block, box, etc.
+** If you want any of them styled differently for a specific parent, add
+** additional rules /with only the differing properties!/ to .parent .class.
+** See .comment .title for an example.
+*/
+.title, .title a {
+  font-weight: bold;
+  font-size: 1.3em;
+  color: #777;
+  margin: 0 auto;  /* decrease default margins for h<x>.title */
+}
+.submitted {
+  color: #999;
+  font-size: 0.8em;
+}
+.links {
+  color: #999;
+}
+.links a {
+  font-weight: bold;
+}
+.sidebar_right .block, .box {
+  padding: 0 0 1.5em 0;
+}
+.sidebar_right .block {
+  border-bottom: 1px solid #bbb;
+  padding-bottom: 0.75em;
+  margin-bottom: 1.5em;
+}
+.block .title {
+  margin-bottom: .25em;
+}
+.box .title {
+  font-size: 1.1em;
+}
+.node {
+  margin: .5em 0 2em 0;
+}
+.sticky {
+  padding: .5em;
+  background-color: #eee;
+  border: solid 1px #ddd;
+}
+.node .content, .comment .content {
+  margin: .5em 0 .5em 0;
+}
+.node .taxonomy {
+  color: #999;
+  font-size: 0.8em;
+  padding-left: 1.5em;
+}
+.node .picture {
+  border: 1px solid #ddd;
+  float: right;
+  margin: 0.5em;
+}
+.comment {
+  border: 1px solid #abc;
+  padding: .5em;
+  margin-bottom: 1em;
+}
+.comment .title a {
+  font-size: 1.1em;
+  font-weight: normal;
+}
+.comment .new {
+  text-align: right;
+  font-weight: bold;
+  font-size: 0.8em;
+  float: right;
+  color: red;
+}
+.comment .picture {
+  border: 1px solid #abc;
+  float: right;
+  margin: 0.5em;
+}
+
+/*
+** Module specific styles
+*/
+#aggregator .feed-source {
+  background-color: #eee;
+  border: 1px solid #ccc;
+  padding: 1em;
+  margin: 1em 0;
+}
+#aggregator .news-item .categories, #aggregator .source, #aggregator .age {
+  color: #999;
+  font-style: italic;
+  font-size: 0.9em;
+}
+#aggregator .title {
+  margin-bottom: 0.5em;
+  font-size: 1em;
+}
+#aggregator h3 {
+  margin-top: 1em;
+}
+#forum table {
+  width: 100%;
+}
+#forum td {
+  padding: 0.5em;
+}
+#forum td.forum, #forum td.posts {
+  background-color: #eee;
+}
+#forum td.topics, #forum td.last-reply {
+  background-color: #ddd;
+}
+#forum td.container {
+  background-color: #ccc;
+}
+#forum td.container a {
+  color: #555;
+}
+#forum td.statistics, #forum td.settings, #forum td.pager {
+  height: 1.5em;
+  border: 1px solid #bbb;
+}
+#forum td .name {
+  color: #96c;
+}
+#forum td .links {
+  padding-top: 0.7em;
+  font-size: 0.9em;
+}
+#profile .profile {
+  clear: both;
+  border: 1px solid #abc;
+  padding: .5em;
+  margin: 1em 0em;
+}
+#profile .profile .name {
+  padding-bottom: 0.5em;
+}
+.block-forum h3 {
+  margin-bottom: .5em;
+}
+div.admin-panel .description {
+  color: #999;
+}
+div.admin-panel .body {
+  background: #f4f4f4;
+}
+div.admin-panel h3 {
+  background-color: #69c;
+  color: #fff;
+  padding: 5px 8px 5px;
+  margin: 0;
+}
+
+/** node style **/
+.view-portfolio .views-row {margin: 0 0 3.5em 0;}
+.view-portfolio .views-row-3, 
+.view-portfolio .views-row-6, 
+.view-portfolio .views-row-9, 
+.view-portfolio .views-row-12,
+.view-portfolio .views-row-15 {/*float:right;margin-right: 0;*/}
+.field-name-field-site-photos img,
+.views-field-field-site-url-url img {border:9px solid #eeeeee;padding:1px;}
+.project-title {font-size: 1.8em; color: #454545; font-weight: bold; float: left; margin:0; }
+.views-field-entity-id {float: left; }
+.view-content .project-top-right {float: right; padding: 5px 0 0 0;}
+.view-content .project-type { background: url(../images/druplicon.png) 10px top  no-repeat; height: 16px; padding: 0 0 2px 27px; font-size: 11px; font-weight:normal; color: #666;}
+.view-content .project-view-online {font-size: 11px; background: url(../images/icon_world.gif) left center no-repeat; padding-left: 17px;}
+a.next-link {font-size: 11px; background: url(../images/arrow_down.gif) left 1px no-repeat; padding-left: 15px;}
+.view-content .project-view-online .offline {color:  #999; font-weight: bold;}
+
+.top-link-wrapper {
+	position: fixed;
+	bottom: 0;
+	right: 20px;
+	background: #454545;
+	padding: 0.5em;
+}
+
+.photo-me {
+	margin: 0 1em 0 0;
+	border: 5px solid #eee;
+	padding: 1px;
+}
+.recommendations {
+	margin: 0 2em;
+}
+.recommendation {
+	border-bottom: 1px dotted #eee;
+	padding-bottom: 0.7em;
+	margin-bottom: 0.7em;
+}
+.recommendation-person {
+	font-size: 11px;
+	color: #666;
+	font-style: italic;
+}
+
+/** utilities **/
+.floatholder{width:100%;}
+.floatright{float:right}
+.floatleft{float:left} 
+/* *** Float containers fix: http://www.csscreator.com/attributes/containedfloat.php *** */ 
+.clearfix:after{ content:"."; display:block;height:0; clear:both; visibility:hidden} 
+.clearfix{display:inline-table}
+* html .clearfix{height:1%}.clearfix{display:block}
+

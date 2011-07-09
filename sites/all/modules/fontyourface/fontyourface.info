@@ -1,0 +1,24 @@
+; $Id: fontyourface.info,v 1.2 2011/01/16 18:45:00 sreynen Exp $
+name = @font-your-face
+description = Administrative interface for managing fonts.
+package = @font-your-face
+dependencies[] = views
+core = 7.x
+files[] = fontyourface.install
+files[] = fontyourface.module
+files[] = fontyourface.test
+files[] = views/fontyourface.views_default.inc
+files[] = views/views_handler_field_fontyourface_font.inc
+files[] = views/views_handler_field_fontyourface_foundry.inc
+files[] = views/views_handler_field_fontyourface_license.inc
+files[] = views/views_handler_field_fontyourface_provider.inc
+files[] = views/views_handler_field_fontyourface_tag_font_tid.inc
+files[] = views/views_handler_filter_tag_font_tid.inc
+files[] = views/views_handler_relationship_fontyourface_tag.inc
+
+; Information added by drupal.org packaging script on January 1, 1970 - 00:00
+version = "7.x-1.0-beta2"
+core = "7.x"
+project = "fontyourface"
+datestamp = "1295737896"
+

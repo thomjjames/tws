@@ -1,0 +1,20 @@
+; $Id: tws_v4.info,v 1.5 2007/07/01 23:27:32 goba Exp $
+name = Toms Web Stuff
+description = Tableless, recolorable, multi-column, fluid width theme (default).
+package = Core
+version = VERSION
+core = 7.x
+
+stylesheets[all][] = css/style.css
+stylesheets[print][] = css/print.css
+
+scripts[] = scripts/theme.js
+
+regions[header] = Header
+regions[help] = Help
+regions[footer] = Footer
+regions[highlighted] = Highlighted
+
+regions[featured] = Featured
+regions[content] = Content
+regions[sidebar_right] = Sidebar right
