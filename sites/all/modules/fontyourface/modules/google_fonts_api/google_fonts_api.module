@@ -1,5 +1,4 @@
 <?php
-// $Id: google_fonts_api.module,v 1.4 2011/01/16 18:45:00 sreynen Exp $
 
 /**
  * Implements hook_fontyourface_info().
@@ -50,17 +49,39 @@ function google_fonts_api_preprocess_page(&$vars) {
   if (!empty($vars['fontyourface'])) {
 
     $paths = array();
+    $subsets = array();
 
     foreach ($vars['fontyourface'] as $used_font) {
 
       if ($used_font->provider == 'google_fonts_api') {
+
         $metadata = unserialize($used_font->metadata);
-        $paths[] = $metadata['path'];
+
+        $path_parts = explode(':', $metadata['path']);
+        $subsets[$metadata['subset']] = $metadata['subset'];
+
+        if (!isset($paths[$path_parts[0]])) {
+          $paths[$path_parts[0]] = array();
+        } // if
+
+        if (count($path_parts) > 1) {
+          $paths[$path_parts[0]][] = $path_parts[1];
+        } // if
+        else {
+          $paths[$path_parts[0]][] = 'regular';
+        } // else
+
       } // if
 
     } // foreach
 
     if (count($paths) > 0) {
+
+      $families = array();
+
+      foreach ($paths as $family => $variants) {
+        $families[] = $family . ':' . implode(',', $variants);
+      } // foreach
 
       $base = 'http://fonts.googleapis.com/css?family=';
 
@@ -68,7 +89,9 @@ function google_fonts_api_preprocess_page(&$vars) {
         $base = 'https://fonts.googleapis.com/css?family=';
       } // if
 
-      fontyourface_add_css_in_preprocess($vars, $base . implode('|', $paths), 'remote');
+      $url = $base . implode('|', $families) . '&subset=' . implode(',', $subsets);
+
+      fontyourface_add_css_in_preprocess($vars, $url, 'remote');
 
     } // if
 
@@ -85,7 +108,9 @@ function google_fonts_api_fontyourface_import() {
 
   foreach ($fonts as $font) {
 
-    $font->tags = array();
+    if (!isset($font->tags)) {
+      $font->tags = array();
+    } // if
     fontyourface_save_font($font);
 
   } // foreach

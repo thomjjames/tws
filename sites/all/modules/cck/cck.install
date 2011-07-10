@@ -1,5 +1,4 @@
 <?php
-// $Id: cck.install,v 1.8 2010/04/25 19:56:16 karens Exp $
 /**
  * Implementation of hook_install().
  */

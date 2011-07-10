@@ -1,5 +1,4 @@
 <?php
-// $Id: content_migrate.filefield.inc,v 1.2 2011/01/21 13:41:13 karens Exp $
 /**
  * @file content_migrate.filefield.inc
  * Code to implement hook_content_migrate_field_alter, content_migrate_instance_alter() and content_migrate_data_record_alter()
@@ -16,19 +15,21 @@
  */
 function content_migrate_filefield_field_alter(&$field_value, $instance_value) {
 
-  switch ($instance_value['widget']['module']) {
-    case 'imagefield':
-      // Module names and types changed.
-      $field_value['module'] = 'image';
-      $field_value['type'] = 'image';
-      // default_image is now a field setting.
-      $field_value['settings']['default_image'] = $instance_value['widget']['settings']['default_image'];
-      break;
-    case 'filefield':
-      // Module names and types changed.
-      $field_value['module'] = 'file';
-      $field_value['type'] = 'file';
-      break;
+  // There are a bunch of custom imagefield widgets. If they at least start the widget name with 'imagefield' this will work.
+  if (substr($instance_value['widget']['type'], 0, 10) == 'imagefield') {
+    // Module names and types changed.
+    $field_value['messages'][] = t("Changed field type: The '@field' field type will be changed from '@type' to 'image'.", array('@type' => $field_value['type'], '@field' => $field_value['field_name'], '@widget' => $instance_value['widget']['type']));
+    $field_value['module'] = 'image';
+    $field_value['type'] = 'image';
+    // default_image is now a field setting.
+    $field_value['settings']['default_image'] = $instance_value['widget']['settings']['default_image'];
+  }
+  // There are a bunch of custom filefield widgets. If they at least start the widget name with 'filefield' this will work.
+  if (substr($instance_value['widget']['type'], 0, 9) == 'filefield') {
+    // Module names and types changed.
+    $field_value['messages'][] = t("Changed field type: The '@field' field type will be changed from '@type' to 'file'.", array('@type' => $field_value['type'], '@field' => $field_value['field_name'], '@widget' => $instance_value['widget']['type']));
+    $field_value['module'] = 'file';
+    $field_value['type'] = 'file';
   }
 }
 
@@ -50,16 +51,20 @@ function content_migrate_filefield_instance_alter(&$instance_value, $field_value
       $instance_value['widget']['type'] = 'image';
 
       // Most settings became instance settings instead of widget settings, with a couple name changes.
-      $instance_value['settings']['file_directory'] = $instance_value['widget']['settings']['file_path'];
+      $instance_value['settings']['file_directory'] = isset($instance_value['widget']['settings']['file_path']) ? $instance_value['widget']['settings']['file_path'] : '';
       unset($instance_value['widget']['settings']['file_path']);
-      $instance_value['settings']['file_extensions'] = $instance_value['widget']['settings']['file_extensions'];
-      unset($instance_value['widget']['settings']['file_extensions']);
-      $instance_value['settings']['max_filesize'] = $instance_value['widget']['settings']['max_filesize_per_file'];
+      $instance_value['settings']['max_filesize'] = isset($instance_value['widget']['settings']['max_filesize_per_file']) ? $instance_value['widget']['settings']['max_filesize_per_file'] : 0;
       unset($instance_value['widget']['settings']['max_filesize_per_file']);
-      $instance_value['settings']['max_resolution'] = $instance_value['widget']['settings']['max_resolution'];
-      unset($instance_value['widget']['settings']['max_resolution']);
-      $instance_value['settings']['min_resolution'] = $instance_value['widget']['settings']['min_resolution'];
-      unset($instance_value['widget']['settings']['min_resolution']);
+      $instance_value['settings']['file_extensions'] = isset($instance_value['widget']['settings']['file_extensions']) ? $instance_value['widget']['settings']['file_extensions'] : '';
+      unset($instance_value['widget']['settings']['file_extensions']);
+      $settings = array(
+        'max_resolution' => 0,
+        'min_resolution' => 0,
+      );
+      foreach ($settings as $setting => $default_value) {
+        $instance_value['settings'][$setting] = isset($instance_value['widget']['settings'][$setting]) ? $instance_value['widget']['settings'][$setting] : $default_value;
+        unset($instance_value['widget']['settings'][$setting]);
+      }
 
       // What is the difference between alt and custom_alt on the old field?
       $instance_value['settings']['alt_field'] = $instance_value['widget']['settings']['custom_alt'];
@@ -99,12 +104,12 @@ function content_migrate_filefield_instance_alter(&$instance_value, $field_value
  *
  * Tweaks individual records in a field.
  */
-function content_migrate_filefield_data_record_alter(&$record, $field) {
+function content_migrate_filefield_data_record_alter(&$record, $field, $instance) {
 
   switch($field['type']) {
     case 'image':
       // Map D6 imagefield field columns to D7 image field columns.
-      if (!empty($record[$field['field_name'] . '_title']) && ($data = unserialize($record[$field['field_name'] . '_title']))) {
+      if (!empty($record[$field['field_name'] . '_data']) && ($data = unserialize($record[$field['field_name'] . '_data']))) {
         $record[$field['field_name'] . '_alt'] = $data['alt'];
         $record[$field['field_name'] . '_title'] = $data['title'];
       }
@@ -116,11 +121,16 @@ function content_migrate_filefield_data_record_alter(&$record, $field) {
     // Fall through.
     case 'file':
       // Map D6 filefield field columns to D7 file field columns.
-      if (!empty($record[$field['field_name'] . '_description']) && ($data = unserialize($record[$field['field_name'] . '_description']))) {
+      if (!empty($record[$field['field_name'] . '_data']) && ($data = unserialize($record[$field['field_name'] . '_data'])) && isset($data['description'])) {
         $record[$field['field_name'] . '_description'] = $data['description'];
       }
       else {
         unset($record[$field['field_name'] . '_description']);
+      }
+
+      if (isset($record[$field['field_name'] . '_list'])) {
+        $record[$field['field_name'] . '_display'] = $record[$field['field_name'] . '_list'];
+        unset($record[$field['field_name'] . '_list']);
       }
 
       // Copies imagefield data from the old 'files' table into 'files_managed' and sets file_usage

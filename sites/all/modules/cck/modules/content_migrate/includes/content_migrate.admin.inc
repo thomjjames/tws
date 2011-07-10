@@ -1,25 +1,21 @@
 <?php
-// $Id: content_migrate.admin.inc,v 1.2 2011/01/22 14:00:47 karens Exp $
 /**
  * @file content_migrate.admin.inc
  * Code to process field data migration, moved into a separate file for efficiency.
  */
 
 /**
- * Form generator for the migration selection form.
- * 
- * @todo Make this into a nice table where you have 
- * an option to check all available fields to migrate
- * them all at once.
+ * Determine which fields can be migrated, have already been migrated, and are
+ * unable to be migrated due to missing modules.
  */
-function content_migrate_select($form, &$form_state) {
-  $form = array();
+function content_migrate_get_options() {
   $options = array('available' => array(), 'converted' => array(), 'missing' => array());
   
   $field_values = content_migrate_get_field_values();
+
   if (empty($field_values)) {
     drupal_set_message(t('There is no D6 field information in this database.'));
-    return $form;
+    return FALSE;
   }
 
   $type_names = node_type_get_names();
@@ -29,28 +25,37 @@ function content_migrate_select($form, &$form_state) {
   $available_modules = array_unique(array_merge(module_implements('field_info'), module_implements('field_widget_info')));
   
   foreach ($field_values as $field_name => $field_value) {
+    $messages = array();
     $bundles = array();
     $missing_module = !in_array($field_value['module'], $available_modules);
-    $missing_modules = $missing_module ? array($field_value['module']) : array();
+    if ($missing_module) {
+      $messages[] = '<span class="error">' . t("Missing field module: '@field'. This field cannot be migrated.", array('@field' => $field_value['module'])) . '</span>';
+    }
+    if (isset($field_value['messages'])) {
+      $messages = array_merge($messages, $field_value['messages']);
+      unset($field_value['messages']);
+    }
+
     $instance_values = content_migrate_get_instance_values(NULL, $field_name);
-    
+
+
     // Debug
     //dsm($field_value);
     //dsm($instance_values);
     
     foreach ($instance_values as $bundle => $instance_value) {
+      if (isset($instance_value['messages'])) { 
+        $messages = array_merge($messages, $instance_value['messages']);    
+        unset($instance_values[$bundle]['messages']);
+      }
       $bundles[] = $type_names[$bundle];
       $label = $instance_value['label'];
-      if (!in_array($instance_value['widget']['module'], $available_modules)) {
-        $missing_module = TRUE;
-        $missing_modules[] = $instance_value['widget']['module'];
-      }
     }
     $data = array(
       0 => $field_name,
       1 => $field_value['type'],
-      2 => implode(', ', $bundles),
-      3 => empty($missing_modules) ? '' : t('Missing modules: @list', array('@list' => implode(', ', $missing_modules))),
+      2 => theme('item_list', array('items' => $bundles)),
+      3 => theme('item_list', array('items' => $messages)),
     );
     if (in_array($field_name, $new_fields)) {
       $options['converted'][$field_name] = $data;
@@ -63,6 +68,22 @@ function content_migrate_select($form, &$form_state) {
       $options['available'][$field_name] = $data;
     }
   }
+  return $options;
+}
+
+/**
+ * Form generator for the migration selection form.
+ * 
+ * @todo Make this into a nice table where you have 
+ * an option to check all available fields to migrate
+ * them all at once.
+ */
+function content_migrate_select($form, &$form_state) {
+  $form = array();
+  $options = content_migrate_get_options();
+  if (!$options) {
+    return $form;
+  }
 
   $header = array(t('Field'), t('Field type'), t('Content type(s)'), t('Other information'));
   $form['#tree'] = TRUE;
@@ -71,7 +92,7 @@ function content_migrate_select($form, &$form_state) {
     '#collapsible' => TRUE,
     '#collapsed' => count($options['available']) < 1,
     '#title' => t('Available fields'),
-    '#description' => t('Fields that have not yet been migrated but are available for migration.'),
+    '#description' => t('Fields that have not yet been migrated but are available for migration. <strong>Please carefully read the messages next to each field before migrating it to understand changes that might be made.</strong>'),
   );
   $form['available']['data'] = array(
     '#type' => 'tableselect',
@@ -128,6 +149,13 @@ function content_migrate_select($form, &$form_state) {
  */
 function content_migrate_rollback_submit($form, &$form_state) {
   $field_names = array_filter($form_state['values']['converted']['data']);
+  content_migrate_rollback($field_names);
+}
+
+/**
+ * Helper function to perform rollback.
+ */
+function content_migrate_rollback($field_names) {
   foreach ($field_names as $field_name) {
     $field = field_info_field($field_name);
     
@@ -167,9 +195,7 @@ function _content_migrate_batch($field_names) {
   $batch = array(
     'title' => t('Migrating data'),
     'file'  => drupal_get_path('module', 'content_migrate') . '/includes/content_migrate.admin.inc',
-    'operations' => array(
-      array('_content_migrate_batch_process_create_fields', array($field_names)),
-    ),
+    'operations' => array(),
     'finished' => "Field migration is finished",
     'init_message' => t("Fields migration is starting."),
     'progress_message' => t('Processed @current out of @total.'),
@@ -177,6 +203,7 @@ function _content_migrate_batch($field_names) {
   );
   // Migrate field data one field at a time.
   foreach ($field_names as $field_name) {
+    $batch['operations'][] = array('_content_migrate_batch_process_create_fields', array($field_name));
     $batch['operations'][] = array('_content_migrate_batch_process_migrate_data', array($field_name));
   }
   batch_set($batch);
@@ -185,51 +212,75 @@ function _content_migrate_batch($field_names) {
 /**
  * Batch operation callback to create fields.
  */
-function _content_migrate_batch_process_create_fields($field_names) {
+function _content_migrate_batch_process_create_fields($field_name, &$context) {
+  $messages = array();
+  $errors = array();
   $type_names = node_type_get_names();
-  foreach ($field_names as $field_name) {
-    $context['message'] = "creating field $field_name";
-    $field_value = content_migrate_get_field_values($field_name);
-
-    // Create the field and store the new field 
-    // definition in $context so we can retrieve it later. 
-    try {
-      // A shared field may already have been created, check first.
-      $field = field_info_field('node', $field_value['field_name']);
-      if (empty($field)) {
-        unset($field_value['columns']);
-        unset($field_value['db_storage']);   
-        $field = field_create_field($field_value);
-        $context['fields'][$field_name] = $field;
-        drupal_set_message(t("Created field @field_name", array('@field_name' => $field_name)));
-      }
- 
-      // Create each of the new instances and store 
-      // the new instance definitions in $context.
-      $instance_values = content_migrate_get_instance_values(NULL, $field_name);
-
-      foreach ($instance_values as $bundle => $instance_value) {
-        try {
-          $instance = field_create_instance($instance_value); 
-          $context['instances'][$field_name][$instance['bundle']] = $instance;
-          drupal_set_message(t("Created instance of @field_name in bundle @bundle.", array(
-            '@field_name' => $field_name, '@bundle' => $type_names[$instance['bundle']])));
-          
-        }
-        catch (Exception $e) {
-          drupal_set_message(t('Error creating instance of @field_name in bundle @bundle.', array(
-            '@field_name' => $field_name, '@bundle' => $type_names[$instance_value['bundle']])), 'error');
-          drupal_set_message($e, 'error');
-        }
-      }
-    }
-    catch (Exception $e) {
-      drupal_set_message(t("Error creating field @field_name", array('@field_name' => $field_name)), 'error'); 
-      drupal_set_message($e, 'error');
-    }
-    field_info_cache_clear();
-
+  $allowed_fields = field_info_field_types();
+  $allowed_widgets = field_info_widget_types();
+  $allowed_formatters = field_info_formatter_types();
+  
+  $context['message'] = t('"Creating field: %field', array('%field' => $field_name));
+  $field_value = content_migrate_get_field_values($field_name);
+  if (isset($field_value['messages'])) {
+    $messages = $field_value['messages'];
+    unset($field_value['messages']);
   }
+  $instance_info = field_info_instances('node');
+
+  // Create the field and store the new field 
+  // definition in $context so we can retrieve it later. 
+  try {
+    // A shared field may already have been created, check first.
+    $field = field_info_field($field_value['field_name']);
+    if (empty($field)) {
+      unset($field_value['columns']);
+      unset($field_value['db_storage']);   
+      $field = field_create_field($field_value);
+      $context['fields'][$field_name] = $field;
+      $messages[] = t("Created field @field_name", array('@field_name' => $field_name));
+    }
+ 
+    // Create each of the new instances and store 
+    // the new instance definitions in $context.
+    $instance_values = content_migrate_get_instance_values(NULL, $field_name);
+
+    foreach ($instance_values as $bundle => $instance_value) {
+      try {
+
+        if (isset($instance_value['messages'])) { 
+          $messages = array_merge($messages, $instance_value['messages']);    
+          unset($instance_value['messages']);
+        }
+
+        if (!isset($instance_info[$bundle][$field_name])) {
+          $instance = field_create_instance($instance_value); 
+          $context['instances'][$field_name][$bundle] = $instance;
+          $messages[] = t("Created instance of @field_name in bundle @bundle.", array(
+            '@field_name' => $field_name, '@bundle' => $type_names[$bundle]));
+        }
+        
+      }
+      catch (Exception $e) {
+        $errors[] = t('Error creating instance of @field_name in bundle @bundle.', array(
+          '@field_name' => $field_name, '@bundle' => $type_names[$bundle]));
+        $errors[] = $e;
+      }
+    }
+  }
+  catch (Exception $e) {
+    $errors[] = t("Error creating field @field_name", array('@field_name' => $field_name)); 
+    $errors[] = $e;
+  }
+  field_info_cache_clear();
+
+  foreach ($messages as $message) {
+    drupal_set_message($message, 'warning');
+  }
+  foreach ($errors as $error) {
+    drupal_set_message($error, 'error');
+  }
+
   $context['finished'] = TRUE;
 } 
 
@@ -243,7 +294,13 @@ function _content_migrate_batch_process_migrate_data($field_name, &$context) {
   if (!isset($context['sandbox']['progress'])) {
 
     $field_value = content_migrate_get_field_values($field_name);
+    if (isset($field_value['messages'])) {
+      unset($field_value['messages']);
+    }
     $instance_values = content_migrate_get_instance_values(NULL, $field_name);
+    if (isset($instance_values['messages'])) {
+      unset($instance_values['messages']);
+    }
     $types = array();
     foreach ($instance_values as $bundle => $instance_value) {
       $types[] = $bundle;
@@ -260,7 +317,7 @@ function _content_migrate_batch_process_migrate_data($field_name, &$context) {
     $query = db_select($old_table, 'old_table', array('fetch' => PDO::FETCH_ASSOC));
     $node_alias = $query->join('node', 'n', 'old_table.nid=n.nid');
     $result = $query
-      ->fields($node_alias, array('title', 'type'))
+      ->fields($node_alias, array('title', 'type', 'vid', 'language'))
       ->fields('old_table', array('nid'))
       ->orderBy('nid', 'ASC')
       ->distinct()
@@ -268,7 +325,7 @@ function _content_migrate_batch_process_migrate_data($field_name, &$context) {
     
     $nodes = array();
     foreach ($result as $row) {
-      $nodes[] = array('nid' => $row['nid'], 'title' => $row['title'], 'type' => $row['type']);
+      $nodes[] = array('nid' => $row['nid'], 'title' => $row['title'], 'type' => $row['type'], 'vid' => $row['vid'], 'language' => $row['language']);
     }
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['max'] = count($nodes);
@@ -287,6 +344,12 @@ function _content_migrate_batch_process_migrate_data($field_name, &$context) {
   // Process one node in each batch.
 
   $node = array_shift($context['sandbox']['nodes']);
+  if (!$node) {
+    return;
+  }
+
+  $field = field_info_field($field_name);
+  $instance = field_info_instance('node', $field_name, $node['type']);
 
   // Construct an record to insert into the new field table
   // from the data in the old table.
@@ -294,9 +357,15 @@ function _content_migrate_batch_process_migrate_data($field_name, &$context) {
   $query = db_select($context['sandbox']['old_table'], 'old_table', array('fetch' => PDO::FETCH_ASSOC));
     
   // We need new columns for bundle name, entity type, and language.
+  // See the debate going on at http://drupal.org/node/1164852.
+  // Reverting back to setting all nodes as untranslated.
+  $language = LANGUAGE_NONE;
+  if ($field['translatable']) {
+    //$language = $node['language'];
+  }
   $query->addExpression("'". $node['type'] ."'", 'bundle');
   $query->addExpression("'node'", 'entity_type');
-  $query->addExpression("'". LANGUAGE_NONE ."'", 'language');
+  $query->addExpression("'". $language ."'", 'language');
     
   // There are new names for what were the nid and vid columns.
   $query->addField('old_table', 'nid', 'entity_id');
@@ -305,8 +374,8 @@ function _content_migrate_batch_process_migrate_data($field_name, &$context) {
   // Add the field columns to the select query.
   // Use the new column names as aliases in case the 
   // name changed, hopefully none did.
-  foreach ($context['sandbox']['old_cols'] as $key => $col) {
-    $query->addField('old_table', $col, $context['sandbox']['new_cols'][$key]);
+  foreach ($context['sandbox']['old_cols'] as $column_name => $db_column_name) {
+    $query->addField('old_table', $db_column_name, $context['sandbox']['new_cols'][$column_name]);
   }
     
   // Add delta, or construct it if missing.
@@ -322,11 +391,30 @@ function _content_migrate_batch_process_migrate_data($field_name, &$context) {
   foreach ($result as $record) {
   
     // Let modules alter this before the insert.
-    drupal_alter('content_migrate_data_record', $record, $context['sandbox']['field']);
+    drupal_alter('content_migrate_data_record', $record, $field, $instance);
+
+    // Don't save empty values.
+    if (!empty($record)) {
+      $function = $field['module'] . '_field_is_empty';
+      if (function_exists($function)) {
+        // The $record array has the database columns as keys, which drupal_write_record() will need,
+        // but the _field_is_empty() function will be looking for the short, normalized column name.
+        $item = array();
+        foreach ($context['sandbox']['new_cols'] as $column_name => $db_column_name) {
+          if (array_key_exists($db_column_name, $record)) {
+            $item[$column_name] = $record[$db_column_name];
+          }
+        }
+        if ($function($item, $field)) {
+          $record = NULL;
+        }
+      }
+    }
 
     if (!empty($record)) {
-      // @TODO We are not handling revisions correctly yet. Just getting a simple insert working.
-      drupal_write_record($context['sandbox']['new_table'], $record);
+      if ($record['revision_id'] == $node['vid']) {
+        drupal_write_record($context['sandbox']['new_table'], $record);
+      }
       drupal_write_record($context['sandbox']['new_revision_table'], $record);
     }
   }

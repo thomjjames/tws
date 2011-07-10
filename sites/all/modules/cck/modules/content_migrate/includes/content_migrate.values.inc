@@ -1,5 +1,4 @@
 <?php
-// $Id: content_migrate.values.inc,v 1.2 2011/01/21 13:41:13 karens Exp $
 /**
  * @file content_migrate.values.inc
  * Code to produce D7-style field and instance values from the data in D6 tables.
@@ -22,15 +21,33 @@ function _content_migrate_get_field_values($field_name = NULL) {
     $query = db_select('content_node_field', 'nf', array('fetch' => PDO::FETCH_ASSOC));
     $node_instance_alias = $query->join('content_node_field_instance', 'ni', 'ni.field_name=nf.field_name');
     $result = $query
-      ->fields($node_instance_alias, array('widget_module', 'widget_type', 'widget_settings', 'display_settings'))
+      ->fields($node_instance_alias, array('type_name', 'widget_module', 'widget_type', 'widget_settings', 'display_settings'))
       ->fields('nf')
+      ->orderBy('type_name')
       ->execute();
     
     foreach ($result as $row) {
       $field_value = $row;
     
+      $query2 = db_select('content_node_field_instance', 'nfi', array('fetch' => PDO::FETCH_ASSOC));
+      $result2 = $query2
+        ->fields('nfi')
+        ->orderBy('type_name')
+        ->condition('field_name', $field_value['field_name'])
+        ->execute();
+
+      $widget_types = array();
+      foreach ($result2 as $row2) {
+        $widget_types[] = $row2['widget_type'];
+      }
+      $widget_types = array_unique($widget_types);
+      if (count($widget_types) > 1) {
+        $field_value['messages'][] = '<span class="error">' . t("Caution: The '@field' field is a shared field that uses different widgets. The '@widget' widget is sometimes used to determine the destination field type for the new field. The migration may not work correctly if other widgets used by this shared field would create different results.", array('@field' => $field_value['field_name'], '@widget' => $row['widget_type'])) .'</span>';
+      }
+
       // Pass instance settings to the field, in case they are needed.
       $instance_value = array(
+        'bundle' => $row['type_name'],
         'widget' => array(
           'type' => $row['widget_type'],
           'module' => $row['widget_module'],
@@ -94,9 +111,15 @@ function _content_migrate_get_field_values($field_name = NULL) {
  */
 function _content_migrate_get_instance_values($bundle = NULL, $field_name = NULL) {
   $instance_values = &drupal_static(__FUNCTION__);
-  
+
   if (empty($instance_values) && db_table_exists('content_node_field_instance')) {
+
+    $allowed_fields = field_info_field_types();
+    $allowed_widgets = field_info_widget_types();
+    $allowed_formatters = field_info_formatter_types();
+  
     $instance_values = array();
+  
     $query = db_select('content_node_field_instance', 'ni', array('fetch' => PDO::FETCH_ASSOC));
     $node_field_alias = $query->join('content_node_field', 'nf', 'ni.field_name=nf.field_name');
     $result = $query
@@ -107,7 +130,8 @@ function _content_migrate_get_instance_values($bundle = NULL, $field_name = NULL
     
     foreach ($result as $row) { 
       $instance_value = $row;
-      
+      $instance_value['messages'] = array();
+
       // Pass field settings to the instance, in case they are needed.
       $field_value = array(
         'require' => $instance_value['required'],
@@ -151,8 +175,11 @@ function _content_migrate_get_instance_values($bundle = NULL, $field_name = NULL
       // Build display values.
       $instance_value['display'] = array();
       $label = $instance_value['display_settings']['label'];
+      $missing_formatters = array();
       foreach ($instance_value['display_settings'] as $context => $settings) {
-
+        if ($context == 'label') {
+          continue;
+        }
         // @TODO Multigroup fields have some unexpected elements, we need to work out what should happen to them.
         if ($context == 'parent' || $context == 'weight') {
           continue;
@@ -163,9 +190,11 @@ function _content_migrate_get_instance_values($bundle = NULL, $field_name = NULL
         // Fix it using drupal_alter().
         $instance_value['display'][$context]['type'] = $settings['format'];
         $instance_value['display'][$context]['settings'] = field_info_formatter_settings($settings['format']);
+        $instance_value['display'][$context]['weight'] = $instance_value['weight'];
+        $instance_value['display'][$context]['module'] = $instance_value['widget_module'];
 
       }
-      
+
       // Unset unneeded values.
       unset($instance_value['type_name'], $instance_value['global_settings'], $instance_value['widget_settings'], $instance_value['display_settings'], $instance_value['widget_module'], $instance_value['widget_active']);
       
@@ -177,6 +206,21 @@ function _content_migrate_get_instance_values($bundle = NULL, $field_name = NULL
       
       // Get rid of this value once CCK or some other module has handled it.
       if (isset($instance_value['widget']['settings']['default_value_php'])) unset($instance_value['widget']['settings']['default_value_php']);
+
+      // Warn about missing or invalid widgets.
+      if (!array_key_exists($instance_value['widget']['type'], $allowed_widgets)) {
+        $instance_value['messages'][] = t("Missing widget: The '@widget' widget is not available for the @field field, it will be set to the default widget.", array('@widget' => $instance_value['widget']['type'], '@field' => $instance_value['field_name']));
+      }
+
+      // Warn about missing or invalid formatters.
+      foreach ($instance_value['display'] as $context => $settings) {
+        if ($settings['type'] != 'default' && !array_key_exists($settings['type'], $allowed_formatters)) {
+          $missing_formatters[$settings['type']][] = $context;
+        }
+      }
+      foreach ($missing_formatters as $formatter => $context) {
+        $instance_value['messages'][] = t("Missing formatter: The '@formatter' formatter used in @view_mode view modes for the @field field is not available, these displays will be reset to the default formatter.", array('@formatter' => $formatter, '@view_mode' => count($context), '@field' => $instance_value['field_name']));
+      }
 
       // Add instance information to instance array.
       $instance_values['instances'][$instance_value['bundle']][$instance_value['field_name']] = $instance_value;

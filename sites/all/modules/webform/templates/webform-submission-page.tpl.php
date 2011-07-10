@@ -1,5 +1,4 @@
 <?php
-// $Id: webform-submission-page.tpl.php,v 1.5 2011/01/05 03:21:27 quicksketch Exp $
 
 /**
  * @file
@@ -12,11 +11,15 @@
  * - $submission_navigation: The previous submission ID.
  * - $submission_information: The next submission ID.
  */
-
-drupal_add_css(drupal_get_path('module', 'webform') . '/css/webform-admin.css', array('weight' => CSS_THEME, 'preprocess' => FALSE));
 ?>
 
-<?php print $submission_navigation; ?>
+<?php if ($submission_actions || $submission_navigation): ?>
+  <div class="clear-block">
+    <?php print $submission_actions; ?>
+    <?php print $submission_navigation; ?>
+  </div>
+<?php endif; ?>
+
 <?php print $submission_information; ?>
 
 <div class="webform-submission">

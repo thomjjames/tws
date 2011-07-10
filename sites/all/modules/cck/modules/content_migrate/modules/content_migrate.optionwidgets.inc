@@ -1,5 +1,4 @@
 <?php
-// $Id: content_migrate.optionwidgets.inc,v 1.2 2011/01/21 13:41:13 karens Exp $
 /**
  * @file content_migrate.optionwidgets.inc
  * Code to implement hook_content_migrate_field_alter, content_migrate_instance_alter() and content_migrate_data_record_alter()

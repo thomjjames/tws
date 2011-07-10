@@ -1,5 +1,4 @@
 <?php
-// $Id: fontyourface.views_default.inc,v 1.2 2011/01/16 18:45:00 sreynen Exp $
 
 /**
  * @file

@@ -1,5 +1,4 @@
 <?php
-// $Id: kernest.module,v 1.3 2011/01/16 18:45:00 sreynen Exp $
 
 /**
  * Implements hook_fontyourface_info().
@@ -19,6 +18,8 @@ function kernest_fontyourface_info() {
 function kernest_fontyourface_import() {
 
   // KERNEST's Joyent server throws 500 error on Drupal's user agent
+
+  $logging = variable_get('fontyourface_detailed_logging', FALSE);
 
   $api_result = drupal_http_request('http://kernest.com/styles/web-native.json', array('headers' => array('User-Agent' => 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.5; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3')));
 
@@ -66,6 +67,9 @@ function kernest_fontyourface_import() {
     } // if
 
   } // if
+  elseif ($logging) {
+    watchdog('@font-your-face', 'Invalid drupal_http_request response: @response', array('@response' => print_r($api_result, TRUE)), WATCHDOG_INFO);
+  } // elseif
 
 } // kernest_fontyourface_import
 
@@ -107,7 +111,7 @@ function kernest_preprocess_page(&$vars) {
 
       if ($used_font->provider == 'kernest') {
         $metaddata = unserialize($used_font->metadata);
-        fontyourface_add_css_in_preprocess($vars, $used_font->url . '.css', TRUE);
+        fontyourface_add_css_in_preprocess($vars, $used_font->url . '.css', 'remote');
       } // if
 
     } // foreach

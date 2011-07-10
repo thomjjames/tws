@@ -1,5 +1,4 @@
 <?php
-// $Id: views_handler_field_fontyourface_tag_font_tid.inc,v 1.2 2011/01/16 18:45:00 sreynen Exp $
 
 /**
  * @file
@@ -88,7 +87,7 @@ class views_handler_field_fontyourface_tag_font_tid extends views_handler_field_
         if (!empty($this->options['link_to_tag'])) {
 
           $this->items[$tag->font_fid][$tag->tid]['make_link'] = TRUE;
-          $this->items[$tag->font_fid][$tag->tid]['path'] = 'admin/appearance/fontyourface/add?tid%5B%5D=' . $tag->tid;
+          $this->items[$tag->font_fid][$tag->tid]['path'] = 'admin/appearance/fontyourface/add?tid[]=' . $tag->tid;
 
         } // if
 

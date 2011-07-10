@@ -1,5 +1,4 @@
 <?php
-// $Id: typekit_api.install,v 1.2 2011/01/16 18:45:00 sreynen Exp $
 
 /**
  * @file
@@ -7,10 +6,22 @@
  */
 
 /**
+ * Implements hook_enable().
+ */
+function typekit_api_enable() {
+
+  // Weight must be above @font-your-face weight so preprocess comes after
+
+  db_query("UPDATE {system} SET weight = 1 WHERE name = 'typekit_api'");
+
+} // typekit_api_enable
+
+/**
  * Implements hook_disable().
  */
 function typekit_api_disable() {
 
   fontyourface_provider_disable('typekit_api');
+  variable_del('typekit_api_token');
 
 } // typekit_api_disable
