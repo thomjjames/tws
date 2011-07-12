@@ -346,6 +346,7 @@ div.admin-panel h3 {
 .view-portfolio .views-row-9, 
 .view-portfolio .views-row-12,
 .view-portfolio .views-row-15 {/*float:right;margin-right: 0;*/}
+.project-screenshot img,
 .field-name-field-site-photos img,
 .views-field-field-site-url-url img {border:9px solid #eeeeee;padding:1px;}
 .project-title {font-size: 1.8em; color: #454545; font-weight: bold; float: left; margin:0; }
