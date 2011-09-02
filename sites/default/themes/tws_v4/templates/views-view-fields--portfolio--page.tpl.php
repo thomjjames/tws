@@ -27,6 +27,6 @@
     <?php echo implode(' | ', $top_right); ?>
   </div>
 </div>
-<div class="project-screenshot"><?php echo $fields['entity_id_1']->content; ?></div>
+<div class="project-screenshot"><?php echo $fields['field_site_photos']->content; ?></div>
 <?php echo !empty($fields['entity_id_3']->content) ? '<div class="project-credits">'. t('Credits') .': '. strip_tags($fields['entity_id_3']->content, '<a><br><br />') .'</div>' : ''; ?>
 <?php echo $fields['edit_node']->content; ?>
